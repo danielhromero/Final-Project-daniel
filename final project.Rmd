@@ -1,0 +1,62 @@
+---
+title: "Final Project Machine Learning"
+Author: Daniel Romero Rodriguez
+---
+
+First We get the data from the links provided:
+
+```{r}
+rm(list = ls())
+if (!file.exists("pml-training.csv")) {
+  download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile = "pml-training.csv")
+}
+if (!file.exists("pml-testing.csv")) {
+  download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", destfile = "pml-testing.csv")
+}
+submit <- read.csv("pml-testing.csv", sep = ",", na.strings = c("", "NA"))
+data <- read.csv("pml-training.csv", sep = ",", na.strings = c("", "NA"))
+```
+
+Then we clean data:
+
+```{r}
+# Remove columns full of NAs.
+features <- names(submit[,colSums(is.na(submit)) == 0])[8:59]
+# Only use features used in submit cases.
+data <- data[,c(features,"classe")]
+submit <- submit[,c(features,"problem_id")]
+```
+
+Dataset is partitioned:
+
+```{r}
+library(caret)
+set.seed(916)
+inTrain = createDataPartition(data$classe, p = 0.75, list = F)
+training = data[inTrain,]
+testing = data[-inTrain,]
+```
+
+```{r}
+outcome = which(names(training) == "classe")
+highCorrCols = findCorrelation(abs(cor(training[,-outcome])),0.90)
+highCorrFeatures = names(training)[highCorrCols]
+training = training[,-highCorrCols]
+outcome = which(names(training) == "classe")
+```
+
+Then we train the model using Randome Forest(RF):
+```{r}
+
+ctrlRF = trainControl(method = "oob")
+modelRF = train(classe ~ ., training, method = "rf", ntree = 200, trControl = ctrlRF)
+
+resultsRF = data.frame(modelRF$results)
+resultsRF
+```
+
+```{r}
+fitRF = predict(modelRF, testing)
+fitRF
+```
+fitRF
